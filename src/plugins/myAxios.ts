@@ -23,6 +23,10 @@ myAxios.interceptors.request.use(function (config) {
 // 添加响应拦截器
 myAxios.interceptors.response.use(function (response) {
     closeToast();
+    if (response?.data?.code === 40100) {
+        const redirectUrl = window.location.href;
+        window.location.href = `/user/login?redirect=${redirectUrl}`
+    }
     // 对响应数据做点什么
     return response.data;
 }, function (error) {

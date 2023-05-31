@@ -8,6 +8,7 @@
                 :tag="teamStatusEnum[team.status]"
         >
             <template #bottom>
+                <van-progress class="team_mes" :percentage="Math.ceil(team.joinNum / team.maxNum * 100)" />
                 <div class="team_mes">
                     {{ "创建时间：" + team.createTime }}
                 </div>
@@ -30,11 +31,11 @@
                         type="primary"
                         size="mini"
                         plain
-                        @click="joinTeam(team.id)"
+                        @click="preJoinTeam(team)"
                 >
                     加入队伍
                 </van-button>
-<!--                todo 仅加入队伍可见-->
+                <!--                todo 仅加入队伍可见-->
                 <van-button
                         v-if="team.hasJoin"
                         type="warning"
@@ -55,12 +56,15 @@
                 </van-button>
             </template>
         </van-card>
+        <van-dialog :show="hasPassWord" title="密码" show-cancel-button @confirm="joinTeam" @cancel="doJoinCache">
+            <van-field v-model="password"/>
+        </van-dialog>
     </div>
 </template>
 <script setup lang="ts">
 import {TeamType} from "../models/team";
 import TeamImg from "../assets/team.png"
-import {teamStatusEnum} from "../constants/team";
+import {teamStatusEnum, teamStatusEnumNum} from "../constants/team";
 import myAxios from "../plugins/myAxios";
 import {showFailToast, showSuccessToast} from "vant";
 import {onMounted, ref} from "vue";
@@ -82,20 +86,54 @@ onMounted(() => {
 })
 
 const router = useRouter();
+
+// 控制输入密码 dialog
+const hasPassWord = ref<boolean>(false)
+// 当前加入的队伍 Id
+const currentTeamId = ref<number>(0)
+// 当前输入的队伍密码
+const password = ref<string>("")
+
 /**
  * 当前用户点击队伍卡片加入队伍
- * @param teamId 队伍 ID
+ * @param team
  */
+const preJoinTeam = (team: TeamType) => {
+    currentTeamId.value = team.id
+    if (team.status === teamStatusEnumNum.SECRET) {
+        // 显示输入密码弹框
+        hasPassWord.value = true
+    } else {
+        joinTeam()
+    }
+}
+
 // todo 密码动态添加
-const joinTeam = async (teamId) => {
+const joinTeam = async () => {
+    // 防止一些异常的情况
+    if (currentTeamId.value <= 0) {
+        return
+    }
     const res = await myAxios.post("/team/join", {
-        teamId
+        teamId: currentTeamId.value,
+        password: password.value
     });
     if (res?.code == 200 && res.data) {
-        showSuccessToast("加入队伍成功");
+        showSuccessToast("加入队伍成功")
+        doJoinCache()
     } else {
-        showFailToast("加入队伍失败" + (res.description ? `,${res.description}` : ""));
+        showFailToast("加入队伍失败" + (res.description ? `,${res.description}` : ""))
     }
+    hasPassWord.value = false
+}
+
+/**
+ * 清空队伍 ID 和 输入的密码
+ */
+const doJoinCache = () => {
+    currentTeamId.value = 0
+    password.value = ""
+    hasPassWord.value = false
 }
 
 /**
@@ -140,5 +178,9 @@ const dissolveTeam = async (id: number) => {
 }
 </script>
 <style lang="scss" scoped>
-
+#team_list {
+    .van-progress {
+        margin:12px 0;
+    }
+}
 </style>
