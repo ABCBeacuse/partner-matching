@@ -1,10 +1,14 @@
 import axios, {AxiosInstance} from "axios";
 import {closeToast, showLoadingToast} from "vant";
 
+// @ts-ignore
+const isDev = process.env.NODE_ENV === 'development'
+
 const myAxios: AxiosInstance = axios.create({
-    baseURL: 'http://localhost:8080/api'
+    baseURL: isDev ? 'http://localhost:8080/api' : '线上的地址'
 })
 
+// 跨域相关
 myAxios.defaults.withCredentials = true
 
 // 添加请求拦截器
